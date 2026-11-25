@@ -36,7 +36,7 @@
 -- PENDING: no row - initial state set and left within one command; not reachable as a start state
 --
 -- ASSUMPTIONS: assumption | value used | open question
--- A-01 notificationId format | NTF-<nnn> | generation rule not in the model (HITL task)
+-- A-01 notificationId in fixtures | NTF-<nnn> (fixture ids only; the service generates a UUIDv7, T-04 decided 2026-11-25) | -
 -- A-02 one Notification per orderId + type; redelivery finds it by that key | as listed | correlation rule not in the model (HITL task)
 -- A-03 channel: inputs carry only customerEmail, so every notification is EMAIL | 'EMAIL' | channel choice not in the model (HITL task)
 -- A-04 recipient = input customerEmail; customer emails as in orders fixtures (customer@example.com, customer0nn@example.com) | as listed | -
