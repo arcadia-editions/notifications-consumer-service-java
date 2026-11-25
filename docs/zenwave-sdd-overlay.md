@@ -18,7 +18,7 @@ The flow also references the other contexts' ZDLs: `../orders-checkout-api`, `..
 |---|---|
 | Business flows (ZFL) | `../arcadia-editions-architecture/business-flows/*.zfl` (today: `place-order-flow.zfl`) |
 | Domain models (ZDL), one per bounded context | `../notifications-consumer-api/domain-model.zdl` (this service); other contexts: `../<context>-api/domain-model.zdl` |
-| API contracts | `../notifications-consumer-api/openapi.yml`, `../notifications-consumer-api/asyncapi.yml` (published events), `../notifications-consumer-api/asyncapi-client.yml` (consumed events), Avro schemas in `../notifications-consumer-api/avro/` |
+| API contracts | `../notifications-consumer-api/openapi.yml` (no operations: `paths: {}`), `../notifications-consumer-api/asyncapi.yml` (published events), `../notifications-consumer-api/asyncapi-client.yml` (consumed events), Avro schemas in `../notifications-consumer-api/avro/` |
 | Glossary and ADRs | `GLOSSARY.md`, `docs/adr/` |
 | Domain summary | `docs/domain.md` |
 | Board of the flow in progress | `docs/tasks.md` (archived boards in `docs/tasks/`) |
@@ -26,23 +26,36 @@ The flow also references the other contexts' ZDLs: `../orders-checkout-api`, `..
 | Test data and scenario matrix | `<after test data: src/test/resources/data.sql, and what its header holds: the chains, the fixed test "now" and how tests read it (a Clock)>` |
 | Generation script | `zenwave-scripts.zw` |
 
-**The models are read from raw GitHub URLs, not a packaged artifact.** `zenwave-scripts.zw` (`zdlFile`,
-`openapiFile`) and `pom.xml` (`openapi.inputSpec`, `asyncapi.inputSpec`, `asyncapi.client.inputSpec`, the
-`*.avro.imports`) point at `https://raw.githubusercontent.com/arcadia-editions/notifications-consumer-api/refs/heads/main/...`
-(client Avro imports at `orders-checkout-api`). The generated code reflects `main` on GitHub, not the local
-clone.
+**`zenwave-scripts.zw` and `pom.xml` read the models from released packages** (`@import(...)` and `classpath:`):
 
-- staleness check (prints nothing when the local clone matches what the build reads):
+- artifacts and versions: `com.arcadiaeditions.notifications.customer-communications.notifications-consumer:service-all:0.2.0`
+  (the `@import` of `zenwave-scripts.zw` and `pom.xml` `notifications-consumer-api.version` must match) and, for the
+  consumed Avro types (`StockUnavailableItem`), `com.arcadiaeditions.orders.checkout.orders-checkout:service-all:0.2.0`
+  (`orders-checkout-api.version`). Repository: `https://maven.pkg.github.com/arcadia-editions/arcadia-editions-architecture`
+  (server id `github` in `~/.m2/settings.xml`). Folder inside the jar:
+  `com/arcadiaeditions/notifications/customer-communications/notifications-consumer/`.
+- `openapi.yml` has no operations (`paths: {}`): this service exposes no REST API; it is pinned anyway so the OpenAPI
+  generators keep working when operations are added.
+- regenerate: `ZW_FILE=zenwave-scripts.zw node ../api-product-workflows/scripts/zenwave/generate-from-zdl.mjs . .`
+  (`jbang zw` does not read `.zw` files; the script turns the `@import` into `-d`). Never `--force`.
+- extract the models when their repository is not cloned:
 
   ```bash
-  R=https://raw.githubusercontent.com/arcadia-editions/notifications-consumer-api/refs/heads/main
-  for f in domain-model.zdl openapi.yml asyncapi.yml asyncapi-client.yml; do
-    curl -fsSL "$R/$f" | diff -q --strip-trailing-cr - "../notifications-consumer-api/$f" >/dev/null || echo "stale: $f"
-  done
+  P=com/arcadiaeditions/notifications/customer-communications/notifications-consumer; V=$(grep -o 'service-all:[^")]*' zenwave-scripts.zw | head -1 | cut -d: -f2)
+  JAR=~/.m2/repository/$P/service-all/$V/service-all-$V.jar
+  mkdir -p target/models && unzip -o -q -j "$JAR" "$P/*.zdl" "$P/*.yml" -d target/models
   ```
 
-- publish a model change: commit and push it to `main` of `notifications-consumer-api` (and the sibling repositories it
-  touches); then regenerate here.
+- staleness check (prints nothing when the packaged copy matches the working copy):
+  `for f in domain-model.zdl openapi.yml asyncapi.yml asyncapi-client.yml; do diff -q --strip-trailing-cr "../notifications-consumer-api/$f" "target/models/$f"; done`
+- release a model change: in `notifications-consumer-api`, run `artifact-release.yml` (workflow_dispatch) for each changed
+  artifact (`domain-model`, `openapi`, `asyncapi-all`; it stamps the file versions and updates the architecture manifest),
+  then `service-all`; bump `notifications-consumer-api.version` and the `@import`; regenerate.
+- residual coupling to `main` (not pinned by the package): the generated `asyncapi-client.yml` `$ref`s the producers'
+  `asyncapi.yml` on `main` (`orders-checkout-api`, `payments-processing-api`) and `api-contract-commons` error topics and
+  message traits on `refs/heads/main`; `domain-model.zdl` `apis { asyncapi client ... }` points at `main` of
+  `orders-checkout-api` and `payments-processing-api`, and its `asyncapiOverlayFiles` / `openapiOverlayFiles` at
+  `api-contract-commons` `refs/heads/main`.
 
 **The ZFL's `@zdl(...)` paths** (`../../<context>-api/domain-model.zdl`, relative to `business-flows/`) resolve to
 the sibling clones above; no mapping needed. This service owns `notifications-consumer-api/domain-model.zdl` only.
@@ -51,8 +64,9 @@ the sibling clones above; no mapping needed. This service owns `notifications-co
 
 - Deployment: **microservices** (one bounded context per repository; Kafka and AsyncAPI with Avro payloads, Schema
   Registry; ZDL consumers use `@asyncapi`).
-- Code already in place: no (`zenwave-tasks-from-models`); only the archetype's `config` package. Generated with
-  ZenWave SDK: not yet (2.8.1 when it is; run `zenwave-scripts.zw`, see Commands).
+- Code already in place: yes (`zenwave-tasks-from-code-and-models`). Generated with ZenWave SDK: yes (2.8.1, commit
+  `e0cf81d`); service methods are still the generated `TODO`s and the AsyncAPI consumer adapters in `adapters.events`
+  are stubs (`UnsupportedOperationException`, `// TODO CUSTOM_REQUIRED`).
 - Stack: Java 25, Spring Boot 4.1.2, Spring Cloud Stream (Kafka), MapStruct, ArchUnit, Maven (no wrapper: `mvn`).
 - Persistence: `jpa` (PostgreSQL; Testcontainers via docker-compose in tests).
 - Organization prefix and packages: `com.arcadiaeditions` (base package `com.arcadiaeditions.notifications.consumer`),
