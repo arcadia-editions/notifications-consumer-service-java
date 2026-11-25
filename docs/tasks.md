@@ -20,9 +20,9 @@ Baseline failures marked "to confirm in step 7" were not run (no Docker in this 
 ## S0 Baseline
 review: [ ]
 
-- [ ] T-01 mechanical AFK Generated tests that should pass do: TestDataLoader reads data/jpa/<Entity simple name> (it reads the table name "notification"; works only on case-insensitive file systems, NPE on Linux; to confirm in step 7), updateTest without Instant.now() (to confirm in step 7)
+- [ ] T-01 mechanical AFK Generated tests that should pass do: updateTest without Instant.now() (to confirm in step 7)
       test data: data/jpa/Notification/1.json, data.sql (C-01, id 1)
-      tests: NotificationsConsumerServiceTest, NotificationRepositoryIntegrationTest#updateTest
+      tests: NotificationRepositoryIntegrationTest#updateTest
 - [ ] T-02 bounded HITL ArchitectureTest fails (run 2026-11-25): core.application uses the generated producer in asyncapi.provider and the Avro types in events.avro (EventsMapper), both outside the hexagon as zenwave-scripts.zw sets it. Decide: allow the dependency in the rule, or put an outbound port in core.outbound; record it as an ADR
       tests: ArchitectureTest
 - [ ] T-03 mechanical AFK Inject a java.time.Clock (system clock in main, fixed 2026-10-14T10:00:00Z in tests) for createdAt, sentAt, failedAt
