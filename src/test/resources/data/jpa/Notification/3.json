@@ -1,0 +1,18 @@
+{
+    "id": 101,
+    "version": 0,
+    "notificationId": "NTF-003",
+    "customerId": "CUST-007",
+    "orderId": "ORD-007",
+    "skus": [],
+    "type": "ORDER_CANCELLED",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your order ORD-007 was cancelled",
+    "body": "Your order ORD-007 was cancelled: PAYMENT_DECLINED. No payment was captured.",
+    "recipient": "customer007@example.com",
+    "createdAt": "2026-10-14T09:51:17Z",
+    "sentAt": "2026-10-14T09:51:27Z",
+    "failedAt": null,
+    "failureReason": null
+}

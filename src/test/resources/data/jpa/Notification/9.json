@@ -1,0 +1,20 @@
+{
+    "id": 401,
+    "version": 0,
+    "notificationId": "NTF-009",
+    "customerId": "CUST-031",
+    "orderId": "ORD-031",
+    "skus": [
+        "SKU-004"
+    ],
+    "type": "STOCK_UNAVAILABLE",
+    "channel": "EMAIL",
+    "status": "FAILED",
+    "subject": "Items unavailable for order ORD-031",
+    "body": "Your order ORD-031 could not be placed: SKU-004 is no longer available.",
+    "recipient": "customer031@example.com",
+    "createdAt": "2026-10-14T09:55:31Z",
+    "sentAt": null,
+    "failedAt": "2026-10-14T09:55:41Z",
+    "failureReason": "mailbox_unavailable"
+}

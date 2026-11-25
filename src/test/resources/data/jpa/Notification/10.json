@@ -1,0 +1,18 @@
+{
+    "id": 451,
+    "version": 0,
+    "notificationId": "NTF-010",
+    "customerId": "CUST-032",
+    "orderId": "ORD-032",
+    "skus": [],
+    "type": "ORDER_CONFIRMATION",
+    "channel": "EMAIL",
+    "status": "FAILED",
+    "subject": "Your order ORD-032 is confirmed",
+    "body": "Your order ORD-032 is confirmed and on its way.",
+    "recipient": "customer032@example.com",
+    "createdAt": "2026-10-14T09:56:32Z",
+    "sentAt": null,
+    "failedAt": "2026-10-14T09:56:42Z",
+    "failureReason": "mailbox_unavailable"
+}

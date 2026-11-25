@@ -1,0 +1,18 @@
+{
+    "id": 251,
+    "version": 0,
+    "notificationId": "NTF-006",
+    "customerId": "CUST-010",
+    "orderId": "ORD-010",
+    "skus": [],
+    "type": "ORDER_CANCELLED",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your order ORD-010 was cancelled",
+    "body": "Your order ORD-010 was cancelled: PAYMENT_VOID_FAILED. No payment was captured, but the hold may still show on your statement until it is released.",
+    "recipient": "customer010@example.com",
+    "createdAt": "2026-10-14T09:51:50Z",
+    "sentAt": "2026-10-14T09:52:00Z",
+    "failedAt": null,
+    "failureReason": null
+}

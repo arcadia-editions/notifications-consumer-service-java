@@ -1,4 +1,18 @@
 {
     "id": 1,
-    "version": 0
+    "version": 0,
+    "notificationId": "NTF-001",
+    "customerId": "CUST-001",
+    "orderId": "ORD-001",
+    "skus": [],
+    "type": "ORDER_CONFIRMATION",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your order ORD-001 is confirmed",
+    "body": "Your order ORD-001 is confirmed and on its way.",
+    "recipient": "customer@example.com",
+    "createdAt": "2026-09-26T13:06:40Z",
+    "sentAt": "2026-09-26T13:06:50Z",
+    "failedAt": null,
+    "failureReason": null
 }

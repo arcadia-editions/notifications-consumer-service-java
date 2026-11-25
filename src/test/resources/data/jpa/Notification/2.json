@@ -1,0 +1,18 @@
+{
+    "id": 51,
+    "version": 0,
+    "notificationId": "NTF-002",
+    "customerId": "CUST-006",
+    "orderId": "ORD-006",
+    "skus": [],
+    "type": "ORDER_CANCELLED",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your order ORD-006 was cancelled",
+    "body": "Your order ORD-006 was cancelled: RESERVATION_EXPIRED. No payment was captured.",
+    "recipient": "customer006@example.com",
+    "createdAt": "2026-10-14T09:50:16Z",
+    "sentAt": "2026-10-14T09:50:26Z",
+    "failedAt": null,
+    "failureReason": null
+}
