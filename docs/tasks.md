@@ -11,17 +11,17 @@ inventory, payments, fulfillment) are boards of their own repositories; here the
 Model paths: ZFL = ../arcadia-editions-architecture/business-flows/place-order-flow.zfl,
 ZDL = ../notifications-consumer-api/domain-model.zdl.
 Test data chains (C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-32): header of src/test/resources/data.sql
-(assumptions A-01..A-10 there). DDL derived from the entity, not exported; validated in step 7.
+(assumptions A-01..A-10 there). DDL exported 2026-11-25 (target/ddl/schema.sql), data.sql matches.
 Approved models: notifications-consumer-api service-all 0.2.0 (tag release/service-all/v0.2.0), orders-checkout-api
 service-all 0.2.0 (consumed Avro); ZFL at arcadia-editions-architecture tag baseline/place-order-flow-<n>.
 No REST operations (openapi.yml 0.2.0 paths: {}): no controller, no API tests. No open proposals.
-Baseline failures marked "to confirm in step 7" were not run (no Docker in this phase).
+Baseline failures confirmed by mvn verify 2026-11-25: only NotificationRepositoryIntegrationTest#updateTest (T-01).
 -->
 
 ## S0 Baseline
 review: [ ]
 
-- [ ] T-01 mechanical AFK Generated tests that should pass do: updateTest without Instant.now() (to confirm in step 7)
+- [ ] T-01 mechanical AFK Generated tests that should pass do: updateTest without Instant.now() (fails at the baseline, mvn verify 2026-11-25)
       test data: data/jpa/Notification/1.json, data.sql (C-01, id 1)
       tests: NotificationRepositoryIntegrationTest#updateTest
 - [x] T-02 bounded HITL ArchitectureTest fails (run 2026-11-25): core.application uses the generated producer in asyncapi.provider and the Avro types in events.avro (EventsMapper), both outside the hexagon as zenwave-scripts.zw sets it. Decide: allow the dependency in the rule, or put an outbound port in core.outbound; record it as an ADR. Decided 2026-11-25 by the person: allow it in the rule (EventProducerSDK layer), docs/adr/0001-core-application-uses-generated-event-producers.md

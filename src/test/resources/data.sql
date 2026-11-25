@@ -1,5 +1,5 @@
 -- Scenario test data. Regenerate with $zenwave-test-scenarios (place-order-flow).
--- DDL derived from entities + modulith data.sql, not exported (Docker busy, 2026-11-25); validated in step 7.
+-- DDL exported 2026-11-25 to target/ddl/schema.sql (export-ddl.sh -t NotificationRepositoryIntegrationTest); data.sql matches it.
 -- Models: notifications-consumer service-all 0.2.0. Only aggregate: Notification (table notification, sequence notification_seq, increment 50).
 -- Fixed test "now" (fixed Clock, still to be added by a board task): 2026-10-14T10:00:00Z.
 -- JSON mirrors: src/test/resources/data/jpa/Notification/<k>.json, k = row position, id = 1 + (k-1)*50.
@@ -44,8 +44,8 @@
 --   comes from the input) | as listed | templates not in the model (HITL task)
 -- A-06 skus = unavailable SKUs for STOCK_UNAVAILABLE, empty ('{}') for the other types (their inputs carry no SKUs) | as listed | -
 -- A-07 failure_reason value | mailbox_unavailable | delivery error codes not in the model (HITL task)
--- A-08 enums stored as names (entity @Enumerated(STRING)); the modulith stores the enum id | 'EMAIL', 'SENT', ... | validated in step 7
--- A-09 skus is a varchar array column (List<String> basic mapping, as in the modulith) | ARRAY[...] / '{}' | validated in step 7
+-- A-08 enums stored as names (entity @Enumerated(STRING)); the modulith stores the enum id | 'EMAIL', 'SENT', ... | confirmed by the DDL (varchar check)
+-- A-09 skus is a varchar array column (List<String> basic mapping, as in the modulith) | ARRAY[...] / '{}' | confirmed by the DDL (varchar(255) array)
 -- A-10 FAILED rows use example.com recipients (orders' C-08 e-mail); the failure is stub-driven, not caused by the address | as listed | -
 -- Timestamps: created_at = upstream event time + 10 s (C-01 capture 13:06:30, C-06..C-10 order cancelled_at), sent_at / failed_at = created_at + 10 s;
 --   off-chain chains and C-13 at 2026-10-14T09:55-09:56, all before "now"

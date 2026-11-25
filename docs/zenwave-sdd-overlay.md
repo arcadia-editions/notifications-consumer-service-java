@@ -23,7 +23,7 @@ The flow also references the other contexts' ZDLs: `../orders-checkout-api`, `..
 | Domain summary | `docs/domain.md` |
 | Board of the flow in progress | `docs/tasks.md` (archived boards in `docs/tasks/`) |
 | Model gap proposals | `docs/proposals/` |
-| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-32` (this context: C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-32), assumptions A-01..A-10, the fixed test "now" `2026-10-14T10:00:00Z` read by tests through a fixed `Clock`, not yet in the code; DDL derived from the entity, not exported, validated in step 7) and `src/test/resources/data/jpa/Notification/<n>.json` |
+| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-32` (this context: C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-32), assumptions A-01..A-10, the fixed test "now" `2026-10-14T10:00:00Z` read by tests through a fixed `Clock`, not yet in the code; DDL exported 2026-11-25 to target/ddl/schema.sql, matches) and `src/test/resources/data/jpa/Notification/<n>.json` |
 | Generation script | `zenwave-scripts.zw` |
 
 **`zenwave-scripts.zw` and `pom.xml` read the models from released packages** (`@import(...)` and `classpath:`):
@@ -88,7 +88,11 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='<TestClass>'
 # full suite with integration tests and containers (once per slice review)
-# <after generation: full suite takes about N minutes, needs Docker (Testcontainers starts the docker-compose PostgreSQL / Kafka / Schema Registry)>
+# about 3 minutes (178 s, 2026-11-25); needs Docker (Testcontainers starts the docker-compose PostgreSQL / Kafka / Schema Registry).
+# Surefire failures stop the build before the integration tests: add -Dmaven.test.failure.ignore=true to see both.
+# NotificationRepositoryIntegrationTest runs twice (Surefire and Failsafe both pick it up).
+# known failing at the baseline (2026-11-25), each fixed by a board task (docs/tasks.md tests:):
+#   NotificationRepositoryIntegrationTest.updateTest: asserts Instant.now() -> T-01
 mvn -q verify
 # lint the models
 bash .zenwave/bin/lint-zdl.sh --strict ../notifications-consumer-api/domain-model.zdl
