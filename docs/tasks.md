@@ -1,0 +1,142 @@
+# PlaceOrderFlow: tasks
+
+flow: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl
+baseline:
+branch: afk/place-order-flow
+
+<!--
+Scope: the NotificationsConsumer bounded context (this repository) only. The steps of the other contexts (orders,
+inventory, payments, fulfillment) are boards of their own repositories; here they are Kafka messages.
+Model paths: ZFL = ../arcadia-editions-architecture/business-flows/place-order-flow.zfl,
+ZDL = ../notifications-consumer-api/domain-model.zdl.
+Test data chains (C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-32): header of src/test/resources/data.sql
+(assumptions A-01..A-10 there). DDL derived from the entity, not exported; validated in step 7.
+Approved models: notifications-consumer-api service-all 0.2.0 (tag release/service-all/v0.2.0), orders-checkout-api
+service-all 0.2.0 (consumed Avro); ZFL at arcadia-editions-architecture tag baseline/place-order-flow-<n>.
+No REST operations (openapi.yml 0.2.0 paths: {}): no controller, no API tests. No open proposals.
+Baseline failures marked "to confirm in step 7" were not run (no Docker in this phase).
+-->
+
+## S0 Baseline
+review: [ ]
+
+- [ ] T-01 mechanical AFK Generated tests that should pass do: TestDataLoader reads data/jpa/<Entity simple name> (it reads the table name "notification"; works only on case-insensitive file systems, NPE on Linux; to confirm in step 7), updateTest without Instant.now() (to confirm in step 7)
+      test data: data/jpa/Notification/1.json, data.sql (C-01, id 1)
+      tests: NotificationsConsumerServiceTest, NotificationRepositoryIntegrationTest#updateTest
+- [ ] T-02 bounded HITL ArchitectureTest fails (run 2026-11-25): core.application uses the generated producer in asyncapi.provider and the Avro types in events.avro (EventsMapper), both outside the hexagon as zenwave-scripts.zw sets it. Decide: allow the dependency in the rule, or put an outbound port in core.outbound; record it as an ADR
+      tests: ArchitectureTest
+- [ ] T-03 mechanical AFK Inject a java.time.Clock (system clock in main, fixed 2026-10-14T10:00:00Z in tests) for createdAt, sentAt, failedAt
+      tests: NotificationsConsumerServiceTest
+      blocked by: T-01
+- [ ] T-04 bounded HITL Decide how notificationId is generated (format, uniqueness) and record it as an ADR; the ZDL and ZFL do not say (fixtures assume NTF-<nnn>, A-01)
+      model: ../notifications-consumer-api/domain-model.zdl:56-58
+- [ ] T-05 bounded HITL Decide how a redelivered event finds its Notification (fixtures assume one per orderId + type, A-02): the ZFL redelivery rule needs a correlation key the ZDL does not give
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:67-68, ../notifications-consumer-api/domain-model.zdl:56-71
+      test data: data.sql (C-01, C-06, C-08, C-13, C-31)
+- [ ] T-06 bounded HITL Decide the channel rule: the inputs carry only customerEmail and Notification.channel is required (EMAIL, SMS, PUSH); fixtures assume always EMAIL (A-03)
+      model: ../notifications-consumer-api/domain-model.zdl:62, ../notifications-consumer-api/domain-model.zdl:79-83, ../notifications-consumer-api/domain-model.zdl:91-113
+- [ ] T-07 bounded HITL Decide the subject and body of each notification type and the failureReason codes; the models give only the PAYMENT_VOID_FAILED rule (the message must say the hold may still show). Fixtures assume A-05, A-07
+      model: ../notifications-consumer-api/domain-model.zdl:64-70, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-327
+      test data: data.sql (C-01, C-10, C-13, C-08)
+- [ ] T-08 mechanical AFK NotificationRepository finder for the correlation key of T-05 (JPA and in-memory twin)
+      model: ../notifications-consumer-api/domain-model.zdl:56-71
+      test data: data.sql (C-01, C-13)
+      tests: NotificationRepositoryIntegrationTest
+      blocked by: T-01, T-05
+- [ ] T-09 advanced AFK Outbound port for delivering a notification (core.outbound) answering sent or failed with a reason, and a deterministic in-memory stub for tests (sent by default, failed when a test says so); the real provider is T-22
+      model: ../notifications-consumer-api/domain-model.zdl:116-129, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:207-213
+      test data: stub-driven (no row): the stub decides SENT or FAILED
+      tests: NotificationDeliveryStubTest
+      blocked by: T-01
+- [ ] T-10 mechanical AFK Spring Cloud Stream bindings in application.yml for the consumed payment-captured-event-v1, stock-unavailable-event-v1, order-cancelled-event-v1 and the produced order-confirmation-sent, stock-unavailable-notification-sent, order-cancelled-notification-sent, notification-delivery-failed channels, replacing the archetype's on-customer-event
+      model: ../notifications-consumer-api/domain-model.zdl:118, ../notifications-consumer-api/domain-model.zdl:122, ../notifications-consumer-api/domain-model.zdl:126, ../notifications-consumer-api/domain-model.zdl:131, ../notifications-consumer-api/domain-model.zdl:141, ../notifications-consumer-api/domain-model.zdl:152, ../notifications-consumer-api/domain-model.zdl:164
+      test data: data.sql (C-12 for a consumed event)
+      tests: KafkaBindingsIntegrationTest
+      blocked by: T-01
+
+## S1 completed (tracer bullet)
+path: ... > FulfillmentScheduled > capturePayment[PaymentCaptured] > sendOrderConfirmation[sent]
+      > OrderConfirmationSent > end completed
+review: [ ]
+
+- [ ] T-11 bounded AFK sendOrderConfirmation sent: redelivery (T-05 key) already SENT or FAILED returns it, no event; else new ORDER_CONFIRMATION Notification (notificationId T-04, channel T-06, recipient = customerEmail, subject/body T-07, createdAt from the Clock), deliver through the T-09 port, SENT + sentAt, persist, emit only OrderConfirmationSent
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:67-68, ../notifications-consumer-api/domain-model.zdl:54-71, ../notifications-consumer-api/domain-model.zdl:91-95, ../notifications-consumer-api/domain-model.zdl:118-120, ../notifications-consumer-api/domain-model.zdl:131-139
+      test data: data.sql (C-12 first delivery, C-01 redelivery)
+      tests: NotificationsConsumerServiceTest#sendOrderConfirmationTest
+      blocked by: T-01, T-03, T-04, T-05, T-06, T-07, T-08, T-09
+- [ ] T-12 mechanical AFK PaymentCapturedConsumerService: map PaymentCaptured orderId, customerId, customerEmail to SendOrderConfirmationInput and call sendOrderConfirmation (replaces the UnsupportedOperationException stub)
+      model: ../notifications-consumer-api/domain-model.zdl:91-95, ../notifications-consumer-api/domain-model.zdl:118, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:207
+      test data: data.sql (C-12)
+      tests: PaymentCapturedConsumerServiceTest
+      blocked by: T-11
+- [ ] T-13 bounded AFK Flow test completed (notifications side): a PaymentCaptured message for C-12 publishes OrderConfirmationSent on notifications-consumer.order-confirmation-sent.event.avro.v1; the same message for C-01 publishes nothing
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:207-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:340-345
+      test data: data.sql (C-01, C-12)
+      tests: PlaceOrderFlowCompletedIntegrationTest
+      blocked by: T-10, T-12
+
+## S2 stockGone
+path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableResult] > StockUnavailable
+      > sendStockUnavailableNotification[sent] > StockUnavailableNotificationSent > end stockGone
+review: [ ]
+
+- [ ] T-14 bounded AFK sendStockUnavailableNotification sent: as T-11 with type STOCK_UNAVAILABLE and skus = the unavailableItems skus; emit only StockUnavailableNotificationSent with the skus
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-234, ../notifications-consumer-api/domain-model.zdl:97-106, ../notifications-consumer-api/domain-model.zdl:122-124, ../notifications-consumer-api/domain-model.zdl:141-150
+      test data: data.sql (C-14 first delivery, C-13 redelivery, C-30 two SKUs)
+      tests: NotificationsConsumerServiceTest#sendStockUnavailableNotificationTest
+      blocked by: T-11
+- [ ] T-15 mechanical AFK StockUnavailableConsumerService: map StockUnavailable orderId, customerId, customerEmail and unavailableItems (sku, requestedQuantity, availableQuantity) to SendStockUnavailableNotificationInput and call sendStockUnavailableNotification
+      model: ../notifications-consumer-api/domain-model.zdl:97-106, ../notifications-consumer-api/domain-model.zdl:122, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:228
+      test data: data.sql (C-14, C-30)
+      tests: StockUnavailableConsumerServiceTest
+      blocked by: T-14
+- [ ] T-16 bounded AFK Flow test stockGone (notifications side): a StockUnavailable message for C-14 publishes StockUnavailableNotificationSent with [SKU-005]; the same message for C-13 publishes nothing
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:228-234, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:340-345
+      test data: data.sql (C-13, C-14, C-30)
+      tests: PlaceOrderFlowStockGoneIntegrationTest
+      blocked by: T-10, T-15
+
+## S3 orderCancelled
+path: ... > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification[sent]
+      > OrderCancelledNotificationSent > end orderCancelled (reasons RESERVATION_EXPIRED, PAYMENT_DECLINED,
+      PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED, PAYMENT_VOID_FAILED)
+review: [ ]
+
+- [ ] T-17 bounded AFK sendOrderCancelledNotification sent: as T-11 with type ORDER_CANCELLED; the body states the reason, and for PAYMENT_VOID_FAILED says the hold may still show; emit only OrderCancelledNotificationSent with reason = input.reason (EventsMapper leaves reason unmapped today)
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-334, ../notifications-consumer-api/domain-model.zdl:108-113, ../notifications-consumer-api/domain-model.zdl:126-128, ../notifications-consumer-api/domain-model.zdl:152-161
+      test data: data.sql (C-03 first delivery, C-06 redelivery, C-10 void refused)
+      tests: NotificationsConsumerServiceTest#sendOrderCancelledNotificationTest
+      blocked by: T-11
+- [ ] T-18 mechanical AFK OrderCancelledConsumerService: map OrderCancelled orderId, customerId, customerEmail, reason to SendOrderCancelledNotificationInput and call sendOrderCancelledNotification
+      model: ../notifications-consumer-api/domain-model.zdl:108-113, ../notifications-consumer-api/domain-model.zdl:126, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:328
+      test data: data.sql (C-03)
+      tests: OrderCancelledConsumerServiceTest
+      blocked by: T-17
+- [ ] T-19 bounded AFK Flow test orderCancelled (notifications side): an OrderCancelled message per reason (C-06..C-10 shapes, first delivery as C-03) publishes OrderCancelledNotificationSent with that reason; PAYMENT_VOID_FAILED's body mentions the hold; redelivery for C-06 publishes nothing
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-334, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:340-345
+      test data: data.sql (C-03, C-06, C-07, C-09, C-10)
+      tests: PlaceOrderFlowCancelledIntegrationTest
+      blocked by: T-10, T-18
+
+## S4 notificationFailed
+path: ... > sendOrderConfirmation | sendStockUnavailableNotification | sendOrderCancelledNotification[failed]
+      > NotificationDeliveryFailed > end notificationFailed
+review: [ ]
+
+- [ ] T-20 bounded AFK Failed branch of the three commands: the T-09 port answers failed, so FAILED + failedAt + failureReason, persist, emit only NotificationDeliveryFailed with type, skus, channel, recipient and reason = failureReason (EventsMapper leaves reason unmapped today); redelivery on FAILED is a no-op
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:207-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:228-234, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:328-339, ../notifications-consumer-api/domain-model.zdl:116-129, ../notifications-consumer-api/domain-model.zdl:163-175
+      test data: data.sql (C-32 confirmation, C-31 stock unavailable, C-08 cancellation)
+      tests: NotificationsConsumerServiceTest#sendOrderConfirmationFailedTest, NotificationsConsumerServiceTest#sendStockUnavailableNotificationFailedTest, NotificationsConsumerServiceTest#sendOrderCancelledNotificationFailedTest
+      blocked by: T-11, T-14, T-17
+- [ ] T-21 bounded AFK Flow test notificationFailed (notifications side): with the stub failing, each consumed event publishes NotificationDeliveryFailed with its type (ORDER_CONFIRMATION, STOCK_UNAVAILABLE, ORDER_CANCELLED) and nothing on the sent topics
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345, ../notifications-consumer-api/domain-model.zdl:163-175
+      test data: data.sql (C-08, C-31, C-32)
+      tests: PlaceOrderFlowNotificationFailedIntegrationTest
+      blocked by: T-13, T-16, T-19, T-20
+
+## S5 delivery provider (outside the flow tests)
+review: [ ]
+
+- [ ] T-22 advanced HITL Choose the e-mail provider, its credentials and error codes, and write the real adapter behind the T-09 port (the flow tests keep the stub)
+      model: ../notifications-consumer-api/domain-model.zdl:62, ../notifications-consumer-api/domain-model.zdl:79-83
+      blocked by: T-09
