@@ -1,5 +1,7 @@
 # Arcadia Editions - Notifications Consumer Service
 
+The domain model and the OpenAPI/AsyncAPI contracts live in [notifications-consumer-api](https://github.com/arcadia-editions/notifications-consumer-api) and are read from there (see `zenwave-scripts.zw` and `pom.xml`).
+
 
 A Java + Spring Boot service created from the ZenWave archetype. Its structure is generated from a ZenWave domain model (ZDL) with the ZenWave SDK, and API contracts (OpenAPI, AsyncAPI) are turned into code on every Maven build.
 
