@@ -2,6 +2,7 @@
 
 flow: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl
 baseline:
+approved: 2026-11-25 by the person (tasks and slices reviewed)
 branch: afk/place-order-flow
 
 <!--
@@ -23,7 +24,7 @@ review: [ ]
 - [ ] T-01 mechanical AFK Generated tests that should pass do: updateTest without Instant.now() (to confirm in step 7)
       test data: data/jpa/Notification/1.json, data.sql (C-01, id 1)
       tests: NotificationRepositoryIntegrationTest#updateTest
-- [ ] T-02 bounded HITL ArchitectureTest fails (run 2026-11-25): core.application uses the generated producer in asyncapi.provider and the Avro types in events.avro (EventsMapper), both outside the hexagon as zenwave-scripts.zw sets it. Decide: allow the dependency in the rule, or put an outbound port in core.outbound; record it as an ADR
+- [x] T-02 bounded HITL ArchitectureTest fails (run 2026-11-25): core.application uses the generated producer in asyncapi.provider and the Avro types in events.avro (EventsMapper), both outside the hexagon as zenwave-scripts.zw sets it. Decide: allow the dependency in the rule, or put an outbound port in core.outbound; record it as an ADR. Decided 2026-11-25 by the person: allow it in the rule (EventProducerSDK layer), docs/adr/0001-core-application-uses-generated-event-producers.md
       tests: ArchitectureTest
 - [ ] T-03 mechanical AFK Inject a java.time.Clock (system clock in main, fixed 2026-10-14T10:00:00Z in tests) for createdAt, sentAt, failedAt
       tests: NotificationsConsumerServiceTest
