@@ -14,18 +14,22 @@
 -- C-08 | ORD-008, CUST-008 | ORDER_CANCELLED FAILED, reason PAYMENT_RETRY_EXHAUSTED | outcome notificationFailed (type ORDER_CANCELLED); redelivery no-op on FAILED
 -- C-09 | ORD-009, CUST-009 | ORDER_CANCELLED SENT, reason PAYMENT_VOIDED | outcome cancelled after fulfillment / capture failure
 -- C-10 | ORD-010, CUST-010 | ORDER_CANCELLED SENT, reason PAYMENT_VOID_FAILED, body says the hold may still show | outcome cancelled, void refused
--- C-12 | ORD-012 | no row (payment AUTHORIZED, capture next) | sendOrderConfirmation first delivery
+-- C-12 | ORD-012, CUST-012 | no row (payment AUTHORIZED, capture next) | sendOrderConfirmation first delivery
 -- C-13 | ORD-013, CUST-013, SKU-004 | STOCK_UNAVAILABLE SENT [SKU-004] (no order persisted) | outcome stockGone; sendStockUnavailableNotification redelivery no-op
 -- C-14 | ORD-014, CUST-014, SKU-005 | no row (catalog: SKU-005 less than requested, mixed with SKU-002) | sendStockUnavailableNotification first delivery
 -- C-30 | ORD-030, CUST-030, SKU-004 + SKU-005 | STOCK_UNAVAILABLE SENT [SKU-004, SKU-005]; off-chain | multiplicity (unavailableItems minlength(1), 2 items)
 -- C-31 | ORD-031, CUST-031, SKU-004 | STOCK_UNAVAILABLE FAILED; off-chain | outcome notificationFailed (type STOCK_UNAVAILABLE)
 -- C-32 | ORD-032, CUST-032 | ORDER_CONFIRMATION FAILED; off-chain | outcome notificationFailed (type ORDER_CONFIRMATION)
+-- C-33 | ORD-033, CUST-033 | no row; off-chain (OrderCancelled reason PAYMENT_VOID_FAILED) | sendOrderCancelledNotification first delivery, void refused (body says the hold may still show)
+-- C-34 | ORD-034, CUST-034, customer034@fail.invalid | no row; off-chain (PaymentCaptured) | sendOrderConfirmation first delivery failed
+-- C-35 | ORD-035, CUST-035, customer035@fail.invalid, SKU-004 | no row; off-chain (StockUnavailable) | sendStockUnavailableNotification first delivery failed
+-- C-36 | ORD-036, CUST-036, customer036@fail.invalid | no row; off-chain (OrderCancelled reason PAYMENT_DECLINED) | sendOrderCancelledNotification first delivery failed
 --
 -- COVERAGE (need -> chain, or why no row)
 -- Lifecycle: the three commands have @transition(to: [SENT, FAILED]) and no from:: each creates a Notification -> no start row; first
---   delivery -> C-12 (confirmation), C-03 (cancellation), C-14 (stock unavailable)
+--   delivery -> C-12 (confirmation), C-03 (cancellation; other reasons: C-03 ids with that reason, C-33 void refused), C-14 (stock unavailable)
 -- Branches: withEvents [<X>Sent | NotificationDeliveryFailed] -> stub-driven (the e-mail delivery port decides SENT or FAILED); finished
---   examples SENT C-01/C-06/C-13, FAILED C-08/C-31/C-32
+--   examples SENT C-01/C-06/C-13, FAILED C-08/C-31/C-32; first delivery failed (stub told to fail, stand-in fails @fail.invalid) C-34/C-35/C-36
 -- Outcomes: completed C-01; stockGone C-13; orderCancelled by decline C-07, retries exhausted C-08 (FAILED), voided C-09, void refused C-10,
 --   expiry C-06; notificationFailed per type: ORDER_CONFIRMATION C-32, STOCK_UNAVAILABLE C-31, ORDER_CANCELLED C-08
 -- Multiplicity: unavailableItems minlength(1) -> skus with 2 SKUs C-30
@@ -46,7 +50,9 @@
 -- A-07 failure_reason value | mailbox_unavailable | decided T-07, ADR 0002
 -- A-08 enums stored as names (entity @Enumerated(STRING)); the modulith stores the enum id | 'EMAIL', 'SENT', ... | confirmed by the DDL (varchar check)
 -- A-09 skus is a varchar array column (List<String> basic mapping, as in the modulith) | ARRAY[...] / '{}' | confirmed by the DDL (varchar(255) array)
--- A-10 FAILED rows use example.com recipients (orders' C-08 e-mail); the failure is stub-driven, not caused by the address | as listed | -
+-- A-10 FAILED rows use example.com recipients (orders' C-08 e-mail): finished history, the failure was stub-driven, not caused by the address | as listed | -
+-- A-11 failing first deliveries (C-34..C-36) use <name>@fail.invalid recipients: tests tell the in-memory stub to fail (T-09), and the same
+--   input fails with the stand-in sender too (T-22, ADR 0002); every other recipient is sent | customer03n@fail.invalid | -
 -- Timestamps: created_at = upstream event time + 10 s (C-01 capture 13:06:30, C-06..C-10 order cancelled_at), sent_at / failed_at = created_at + 10 s;
 --   off-chain chains and C-13 at 2026-10-14T09:55-09:56, all before "now"
 
