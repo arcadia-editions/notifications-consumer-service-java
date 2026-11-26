@@ -50,9 +50,12 @@ public class NotificationsConsumerServiceImpl implements NotificationsConsumerSe
         // TODO: implement this method
         // emit events
         var orderConfirmationSent = eventsMapper.asOrderConfirmationSent(notification);
-        eventsProducer.onOrderConfirmationSent(orderConfirmationSent);
+        eventsProducer.onOrderConfirmationSent(
+                orderConfirmationSent, new NotificationsConsumerEventsProducer.OrderConfirmationSentHeaders());
         var notificationDeliveryFailed = eventsMapper.asNotificationDeliveryFailed(notification);
-        eventsProducer.onNotificationDeliveryFailed(notificationDeliveryFailed);
+        eventsProducer.onNotificationDeliveryFailed(
+                notificationDeliveryFailed,
+                new NotificationsConsumerEventsProducer.NotificationDeliveryFailedHeaders());
         return notification;
     }
 
@@ -64,9 +67,13 @@ public class NotificationsConsumerServiceImpl implements NotificationsConsumerSe
         // TODO: implement this method
         // emit events
         var stockUnavailableNotificationSent = eventsMapper.asStockUnavailableNotificationSent(notification);
-        eventsProducer.onStockUnavailableNotificationSent(stockUnavailableNotificationSent);
+        eventsProducer.onStockUnavailableNotificationSent(
+                stockUnavailableNotificationSent,
+                new NotificationsConsumerEventsProducer.StockUnavailableNotificationSentHeaders());
         var notificationDeliveryFailed = eventsMapper.asNotificationDeliveryFailed(notification);
-        eventsProducer.onNotificationDeliveryFailed(notificationDeliveryFailed);
+        eventsProducer.onNotificationDeliveryFailed(
+                notificationDeliveryFailed,
+                new NotificationsConsumerEventsProducer.NotificationDeliveryFailedHeaders());
         return notification;
     }
 
@@ -78,9 +85,13 @@ public class NotificationsConsumerServiceImpl implements NotificationsConsumerSe
         // TODO: implement this method
         // emit events
         var orderCancelledNotificationSent = eventsMapper.asOrderCancelledNotificationSent(notification);
-        eventsProducer.onOrderCancelledNotificationSent(orderCancelledNotificationSent);
+        eventsProducer.onOrderCancelledNotificationSent(
+                orderCancelledNotificationSent,
+                new NotificationsConsumerEventsProducer.OrderCancelledNotificationSentHeaders());
         var notificationDeliveryFailed = eventsMapper.asNotificationDeliveryFailed(notification);
-        eventsProducer.onNotificationDeliveryFailed(notificationDeliveryFailed);
+        eventsProducer.onNotificationDeliveryFailed(
+                notificationDeliveryFailed,
+                new NotificationsConsumerEventsProducer.NotificationDeliveryFailedHeaders());
         return notification;
     }
 }

@@ -14,6 +14,10 @@ management:
   endpoints.web.exposure.include: "*"
 
 spring:
+  # transactional outbox (docs/adr/0003): Spring Modulith event publication registry
+  modulith.events:
+    jdbc.schema-initialization.enabled: true
+    republish-outstanding-events-on-restart: true
   security:
     user:
       name: admin

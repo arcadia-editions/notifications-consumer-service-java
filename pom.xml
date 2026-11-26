@@ -40,6 +40,9 @@
 		<spring-boot.version>${project.parent.version}</spring-boot.version>
 		<spring-cloud.version>2025.1.4</spring-cloud.version>
 		<avro.version>1.11.1</avro.version>
+		<!-- transactional outbox (ADR 0003) -->
+		<spring-modulith.version>2.1.3</spring-modulith.version>
+		<spring-modulith-events-scs.version>1.3.1</spring-modulith-events-scs.version>
 
 
 		<zenwave.version>2.8.1</zenwave.version>
@@ -62,6 +65,13 @@
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-dependencies</artifactId>
 				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.modulith</groupId>
+				<artifactId>spring-modulith-bom</artifactId>
+				<version>${spring-modulith.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -112,6 +122,21 @@
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-stream-schema-registry-client</artifactId>
+		</dependency>
+		<!-- transactional outbox (ADR 0003): Spring Modulith event publication registry (JDBC), externalized through Spring Cloud Stream -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.zenwave360.sdk</groupId>
+			<artifactId>spring-modulith-events-scs</artifactId>
+			<version>${spring-modulith-events-scs.version}</version>
+		</dependency>
+		<!-- Avro payloads serialized to the publication registry (Jackson 3) -->
+		<dependency>
+			<groupId>tools.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-avro</artifactId>
 		</dependency>
 		<!-- utils -->
 		<dependency>
@@ -388,6 +413,7 @@
 							<generatorName>AsyncAPIGenerator</generatorName>
 							<configOptions>
 								<role>provider</role>
+								<transactionalOutbox>modulith</transactionalOutbox>
 								<!-- payloads are avro: <modelPackage> (${asyncApiModelPackage}) is only needed for json-schema payloads -->
 								<producerApiPackage>${asyncApiProducerApiPackage}</producerApiPackage>
 								<consumerApiPackage>${asyncApiConsumerApiPackage}</consumerApiPackage>
@@ -407,6 +433,7 @@
 							<configOptions>
 								<!-- asyncapi-client.yml is written from this service's point of view (action: receive), so it is generated as provider -->
 								<role>provider</role>
+								<transactionalOutbox>modulith</transactionalOutbox>
 								<producerApiPackage>${asyncApiClientApiPackage}</producerApiPackage>
 								<consumerApiPackage>${asyncApiClientApiPackage}</consumerApiPackage>
 								<avroCompilerProperties.imports>${asyncapi.client.avro.imports}</avroCompilerProperties.imports>
