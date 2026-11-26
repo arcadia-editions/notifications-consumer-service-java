@@ -31,19 +31,19 @@
 -- Multiplicity: unavailableItems minlength(1) -> skus with 2 SKUs C-30
 -- Time: no timer in this context -> no row
 -- Redelivery (ZFL: no-op, no event, when already in a target state): confirmation C-01, cancellation C-06 (SENT) / C-08 (FAILED),
---   stock unavailable C-13 (SENT) / C-31 (FAILED); the correlation key (orderId + type) is not in the model (A-02, HITL task)
+--   stock unavailable C-13 (SENT) / C-31 (FAILED); the correlation key (orderId + type) is not in the model (A-02, decided T-05, ADR 0002)
 -- Read side: no query endpoint (openapi.yml 0.2.0 paths: {}) -> no row
 -- PENDING: no row - initial state set and left within one command; not reachable as a start state
 --
 -- ASSUMPTIONS: assumption | value used | open question
 -- A-01 notificationId in fixtures | NTF-<nnn> (fixture ids only; the service generates a UUIDv7, T-04 decided 2026-11-25) | -
--- A-02 one Notification per orderId + type; redelivery finds it by that key | as listed | correlation rule not in the model (HITL task)
--- A-03 channel: inputs carry only customerEmail, so every notification is EMAIL | 'EMAIL' | channel choice not in the model (HITL task)
+-- A-02 one Notification per orderId + type; redelivery finds it by that key | as listed | decided T-05, ADR 0002
+-- A-03 channel: inputs carry only customerEmail, so every notification is EMAIL | 'EMAIL' | decided T-06, ADR 0002
 -- A-04 recipient = input customerEmail; customer emails as in orders fixtures (customer@example.com, customer0nn@example.com) | as listed | -
 -- A-05 subject / body texts; cancellation reason only in the body (Notification has no reason field; OrderCancelledNotificationSent.reason
---   comes from the input) | as listed | templates not in the model (HITL task)
+--   comes from the input) | as listed | decided T-07, ADR 0002
 -- A-06 skus = unavailable SKUs for STOCK_UNAVAILABLE, empty ('{}') for the other types (their inputs carry no SKUs) | as listed | -
--- A-07 failure_reason value | mailbox_unavailable | delivery error codes not in the model (HITL task)
+-- A-07 failure_reason value | mailbox_unavailable | decided T-07, ADR 0002
 -- A-08 enums stored as names (entity @Enumerated(STRING)); the modulith stores the enum id | 'EMAIL', 'SENT', ... | confirmed by the DDL (varchar check)
 -- A-09 skus is a varchar array column (List<String> basic mapping, as in the modulith) | ARRAY[...] / '{}' | confirmed by the DDL (varchar(255) array)
 -- A-10 FAILED rows use example.com recipients (orders' C-08 e-mail); the failure is stub-driven, not caused by the address | as listed | -
