@@ -19,11 +19,11 @@ The flow also references the other contexts' ZDLs: `../orders-checkout-api`, `..
 | Business flows (ZFL) | `../arcadia-editions-architecture/business-flows/*.zfl` (today: `place-order-flow.zfl`) |
 | Domain models (ZDL), one per bounded context | `../notifications-consumer-api/domain-model.zdl` (this service); other contexts: `../<context>-api/domain-model.zdl` |
 | API contracts | `../notifications-consumer-api/openapi.yml` (no operations: `paths: {}`), `../notifications-consumer-api/asyncapi.yml` (published events), `../notifications-consumer-api/asyncapi-client.yml` (consumed events), Avro schemas in `../notifications-consumer-api/avro/` |
-| Glossary and ADRs | `GLOSSARY.md`, `docs/adr/` |
-| Domain summary | `docs/domain.md` |
+| Glossary and ADRs | no `GLOSSARY.md` (the ZDL/ZFL identifiers are the terms, gate 2026-11-26); `docs/adr/` |
+| Domain summary | none: `../notifications-consumer-api/SUMMARY.md`; gate review notes in `docs/gate/` |
 | Board of the flow in progress | `docs/tasks.md` (archived boards in `docs/tasks/`) |
 | Model gap proposals | `docs/proposals/` |
-| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-32` (this context: C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-32), assumptions A-01..A-10, the fixed test "now" `2026-10-14T10:00:00Z` read by tests through a fixed `Clock`, not yet in the code; DDL exported 2026-11-25 to target/ddl/schema.sql, matches) and `src/test/resources/data/jpa/Notification/<n>.json` |
+| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-36` (this context: C-01, C-03, C-06..C-10, C-12..C-14, C-30..C-36), assumptions A-01..A-11, the fixed test "now" `2026-10-14T10:00:00Z` read by tests through a fixed `Clock`, not yet in the code; DDL exported 2026-11-25 to target/ddl/schema.sql, matches) and `src/test/resources/data/jpa/Notification/<n>.json` |
 | Generation script | `zenwave-scripts.zw` |
 
 **`zenwave-scripts.zw` and `pom.xml` read the models from released packages** (`@import(...)` and `classpath:`):
@@ -67,7 +67,8 @@ the sibling clones above; no mapping needed. This service owns `notifications-co
 - Code already in place: yes (`zenwave-tasks-from-code-and-models`). Generated with ZenWave SDK: yes (2.8.1, commit
   `e0cf81d`); service methods are still the generated `TODO`s and the AsyncAPI consumer adapters in `adapters.events`
   are stubs (`UnsupportedOperationException`, `// TODO CUSTOM_REQUIRED`).
-- Stack: Java 25, Spring Boot 4.1.2, Spring Cloud Stream (Kafka), MapStruct, ArchUnit, Maven (no wrapper: `mvn`).
+- Stack: Java 25, Spring Boot 4.1.2, Spring Cloud Stream (Kafka), Spring Modulith 2.1.3 events (outbox, ADR 0003),
+  MapStruct, ArchUnit, Maven (no wrapper: `mvn`).
 - Persistence: `jpa` (PostgreSQL; Testcontainers via docker-compose in tests).
 - Organization prefix and packages: `com.arcadiaeditions` (base package `com.arcadiaeditions.notifications.consumer`),
   `CleanHexagonalProjectLayout`: `core.domain`, `core.application`, `core.inbound`, `core.outbound`,
@@ -88,10 +89,10 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='<TestClass>'
 # full suite with integration tests and containers (once per slice review)
-# about 3 minutes (178 s, 2026-11-25); needs Docker (Testcontainers starts the docker-compose PostgreSQL / Kafka / Schema Registry).
+# about 4 minutes (233 s, 2026-11-26, with the outbox); needs Docker (Testcontainers starts the docker-compose PostgreSQL / Kafka / Schema Registry).
 # Surefire failures stop the build before the integration tests: add -Dmaven.test.failure.ignore=true to see both.
-# NotificationRepositoryIntegrationTest runs twice (Surefire and Failsafe both pick it up).
-# known failing at the baseline (2026-11-25), each fixed by a board task (docs/tasks.md tests:):
+# NotificationRepositoryIntegrationTest runs once, with Failsafe.
+# known failing at the baseline (2026-11-25, unchanged 2026-11-26), each fixed by a board task (docs/tasks.md tests:):
 #   NotificationRepositoryIntegrationTest.updateTest: asserts Instant.now() -> T-01
 mvn -q verify
 # lint the models
@@ -111,6 +112,11 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
   Testcontainers.
 - Generated at build time into `target/` (never edit): OpenAPI interfaces and `*DTO`s, the AsyncAPI SDK.
 - Format with `mvn spotless:apply`.
-- Decisions already taken that the models don't show: none recorded yet (`docs/adr/`). For a reference
+- Decisions already taken that the models don't show: `docs/adr/` (0001 core.application uses the generated
+  producers, 0002 notification rules and stand-in sender, 0003 transactional outbox with Spring Modulith).
+- Transactional outbox (ADR 0003): events are stored in `event_publication` and reach Kafka after commit (Kafka
+  tests await them). Always call the generated producer with its headers object,
+  `eventsProducer.onX(payload, new NotificationsConsumerEventsProducer.XHeaders())`: the one-argument overload throws
+  `NullPointerException` with the outbox template (zenwave-sdk 2.8.1). For a reference
   implementation of the same flow, see `../arcadia-editions-modulith-service-java/docs/zenwave-sdd-overlay.md`
   (Project rules) and its ADRs.
